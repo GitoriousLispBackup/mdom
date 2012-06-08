@@ -14,4 +14,4 @@
   :long-description "A simple HTML/XML DOM tree parser"
   :serial T
   :components ((:file "package")
-	       (:file "mdom" :depends-on "package")))
+	       (:file "mdom" :depends-on ("package"))))
