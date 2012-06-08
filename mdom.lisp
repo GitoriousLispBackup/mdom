@@ -31,10 +31,15 @@
 (defmethod to-xml ((node tag))
   (with-slots (tag children attributes) node 
     (if children
-	(let ((ret (concatenate 'string "<" tag (if (> (length attributes) 0) (concatenate 'string " " attributes) "") ">"))) 
+	(let ((ret 
+	       (concatenate 'string "<" tag 
+			    (if (> (length attributes) 0) (concatenate 'string " " attributes) "") 
+			    ">"))) 
 	  (loop for child in children do (setf ret (concatenate 'string ret (to-xml child))))
 	  (concatenate 'string ret "</" tag ">"))
-	(concatenate 'string "<" tag " " attributes "/>"))))
+	(concatenate 'string "<" tag 
+		     (if (> (length attributes) 0) (concatenate 'string " " attributes) "") 
+		     "/>"))))
   
 
 (defmethod to-xml ((node textnode))
