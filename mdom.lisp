@@ -2,6 +2,7 @@
 ;;;; Released with BSD License, see LICENSE for details
 
 (in-package :eu.tentacleriot.mdom )
+
 (defclass node ()
   ()
   )
@@ -33,6 +34,17 @@
 	(concatenate 'string "<" tag 
 		     (if (> (length attributes) 0) (concatenate 'string " " attributes) "") 
 		     "/>"))))
+
+(defmethod print-object ((node tag) stream)
+  (print-unreadable-object (node stream :type t)
+    (with-slots (tag) node 
+      (format stream " ~s" tag))))
+
+(defmethod print-object ((node textnode) stream)
+  (print-unreadable-object (node stream :type t)
+    (with-slots (text) node 
+      (let ((otext (if (> (length text) 10) (concatenate 'string (subseq text 0 7) "...") text)))
+	(format stream " ~s" otext)))))
   
 
 (defmethod to-xml ((node textnode))
