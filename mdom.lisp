@@ -69,6 +69,10 @@
 (defun read-tag (stream)
   (subseq (collect-string-until #\> stream :peek Nil) 1))
 
+(defun skip-spaces (stream)
+  (loop while (and (peek-char nil stream nil) (char= (peek-char nil stream) #\Space)) do (read-char stream))
+)
+
 (defun closing-tag-p (str)
   (let ((ps (position #\/ str)))
     (and ps (= 0 ps))))
@@ -86,9 +90,10 @@
 		 (add-child node next-node)))
 	    node)))))
  
-(defun extract-tag-name (str) 
-  (let ((spc (position #\space str))) 
-    (if spc (subseq str 0 spc) str)))
+(defun extract-tag-name (str)
+  (with-input-from-string (stream str)
+    (skip-spaces stream)
+    (collect-string-until #\Space stream))))
 
 (defun extract-attribute (str)
   (let ((spc (position #\space str))) 
