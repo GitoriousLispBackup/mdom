@@ -12,7 +12,8 @@
 	   :get-attributes
 	   :get-attribute
 	   :get-attribute-values
-	   :get-elements-bt-tag-name
+	   :get-elements-by-tag-name
+	   :get-element-by-id
 	   :attribute
 	   :tag
 	   :textnode
