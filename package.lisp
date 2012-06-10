@@ -8,6 +8,12 @@
   (:export :parse
 	   :to-xml
 	   :add-child
+	   :get-children
+	   :get-attributes
+	   :get-attribute
+	   :get-attribute-values
+	   :get-elements-bt-tag-name
+	   :attribute
 	   :tag
 	   :textnode
 	   ))

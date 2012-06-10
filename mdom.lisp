@@ -24,6 +24,32 @@
 (defmethod add-child ((n tag)(c node))
   (with-slots (children) n (setf children (append children (list c)))))
 
+(defgeneric get-children (node))
+
+(defmethod get-children ((node tag))
+  (slot-value node 'children))
+
+(defmethod get-children ((node textnode))
+  nil)
+
+(defgeneric get-attributes (node))
+
+(defmethod get-attributes ((node tag))
+  (slot-value node 'attributes))
+
+(defgeneric get-attribute (node name))
+
+(defmethod get-attribute ((node tag) name) 
+       (delete-if-not (lambda (x) (string= (slot-value x 'name) name)) 
+		      (get-attributes node)))
+
+(defgeneric get-attribute-values (node name))
+
+(defmethod get-attribute-values ((node tag) name)
+  (loop for x in (get-attribute node name) collecting (slot-value x 'value)))
+
+(defmethod get-attribute-values ((node textnode) name) nil)
+
 (defgeneric to-xml (node))
 
 (defmethod to-xml ((node tag))
@@ -143,3 +169,13 @@
 
 (defun parse (html)
   (with-input-from-string (stream html) (read-stream stream)))
+
+(defun flatten (tree)
+  (labels ((flat (node) (append (list node) (mapcan #'flat (get-children node))))) (flat tree)))
+
+(defun get-elements-by-tag-name (tree tag)
+  (delete-if-not (lambda (x) (and (slot-exists-p x 'tag) (string= (slot-value x 'tag) tag))) (flatten tree)))
+
+(defun get-element-by-id (tree id)
+  (car 
+   (delete-if-not (lambda (x) (string= (car (get-attribute-values x "id")) id)) (flatten tree))))
