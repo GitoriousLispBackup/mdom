@@ -15,6 +15,10 @@
 (defclass textnode (node)
   ((text :initarg :text)))
 
+(defclass attribute (node)
+  ((name :initarg :name)
+   (value :initarg :value)))
+
 (defgeneric add-child (n c))
 
 (defmethod add-child ((n tag)(c node))
@@ -23,33 +27,36 @@
 (defgeneric to-xml (node))
 
 (defmethod to-xml ((node tag))
-  (with-slots (tag children attributes) node 
-    (if children
-	(let ((ret 
-	       (concatenate 'string "<" tag 
-			    (if (> (length attributes) 0) (concatenate 'string " " attributes) "") 
-			    ">"))) 
-	  (loop for child in children do (setf ret (concatenate 'string ret (to-xml child))))
-	  (concatenate 'string ret "</" tag ">"))
-	(concatenate 'string "<" tag 
-		     (if (> (length attributes) 0) (concatenate 'string " " attributes) "") 
-		     "/>"))))
+  (with-output-to-string (stream)
+    (with-slots (tag children attributes) node 
+      (format stream "<~a" tag)
+      (if attributes (format stream "~{ ~a~}" (loop for i in attributes collecting (to-xml i))))
+      (if children (format stream ">~{~a~}</~a>" (loop for i in children collecting (to-xml i)) tag)
+	  (format stream "/>")))))
+
+(defmethod to-xml ((node textnode))
+  (slot-value node 'text))
+
+(defmethod to-xml ((node attribute))
+  (with-output-to-string (stream) 
+    (with-slots (name value) node
+      (format stream "~a=\"~a\"" name value))))
 
 (defmethod print-object ((node tag) stream)
   (print-unreadable-object (node stream :type t)
     (with-slots (tag) node 
-      (format stream " ~s" tag))))
+      (format stream " ~a" tag))))
 
 (defmethod print-object ((node textnode) stream)
   (print-unreadable-object (node stream :type t)
     (with-slots (text) node 
       (let ((otext (if (> (length text) 10) (concatenate 'string (subseq text 0 7) "...") text)))
-	(format stream " ~s" otext)))))
-  
+	(format stream " ~a" otext)))))
 
-(defmethod to-xml ((node textnode))
-  (slot-value node 'text))
-
+(defmethod print-object ((node attribute) stream)
+  (print-unreadable-object (node stream :type t)
+    (with-slots (name value) node
+      (format stream "~a=\"~a\"" name value))))
   
 (defun collect-string-until (stop stream &key (peek T))
   (coerce 
@@ -70,8 +77,15 @@
   (subseq (collect-string-until #\> stream :peek Nil) 1))
 
 (defun skip-spaces (stream)
-  (loop while (and (peek-char nil stream nil) (char= (peek-char nil stream) #\Space)) do (read-char stream))
-)
+  (loop while (and (peek-char nil stream nil) (char= (peek-char nil stream) #\Space)) do (read-char stream)))
+
+(defun remove-tail-spaces (str)
+  (labels ((tsp (str) 
+	     (let ((l (length str))) 
+	       (if (string= (subseq str (- l 1) l) " ") 
+		   (tsp (subseq str 0 (- l 1))) 
+		   str))))
+    (tsp str)))
 
 (defun closing-tag-p (str)
   (let ((ps (position #\/ str)))
@@ -91,13 +105,29 @@
 	    node)))))
  
 (defun extract-tag-name (str)
-  (with-input-from-string (stream str)
-    (skip-spaces stream)
-    (collect-string-until #\Space stream))))
+  (let ((tn (with-input-from-string (stream str)
+	      (skip-spaces stream)
+	      (collect-string-until #\Space stream))))
+    (let ((l (length tn))) (if (string= (subseq tn (- l 1) l) "/") 
+			       (subseq tn 0 (- l 1)) 
+			       tn))))
+
+(defun extract-attribute-name (stream)
+  (skip-spaces stream)
+  (remove-tail-spaces (collect-string-until #\= stream :peek Nil)))
+
+(defun extract-attribute-value (stream)
+  (skip-spaces stream)
+  (let ((char (peek-char nil stream nil))) (if (and char (or (char= char #\') (char= char #\"))) (read-char stream))
+  (collect-string-until (case char (#\' #\') (#\" #\") (otherwise #\space)) stream :peek Nil)))
 
 (defun extract-attribute (str)
-  (let ((spc (position #\space str))) 
-    (if spc (subseq str (+ 1 spc)) "")))
+  (delete-if (lambda (x) (string= (slot-value x 'name) "/"))
+  (with-input-from-string (stream (remove-tail-spaces str))
+    (skip-spaces stream)
+    (collect-string-until #\space stream :peek Nil)
+    (loop while (peek-char nil stream nil) 
+       collecting (make-instance 'attribute :name (extract-attribute-name stream) :value (extract-attribute-value stream))))))
   
 (defun read-next (stream)
  (let ((char (peek-char nil stream nil)))
