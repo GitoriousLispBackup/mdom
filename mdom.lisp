@@ -50,6 +50,14 @@
 
 (defmethod get-attribute-values ((node textnode) name) nil)
 
+(defgeneric get-tag (node))
+
+(defmethod get-tag ((node tag))
+  (slot-value node 'tag))
+
+(defmethod get-tag ((node textnode))
+  Nil)
+
 (defgeneric to-xml (node))
 
 (defmethod to-xml ((node tag))
